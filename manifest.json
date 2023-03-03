@@ -8,7 +8,7 @@
         "*://*"
     ],
     "background": {
-        "service_worker": "scripts/x-frame-options.js"
+        "service_worker": "scripts/check_headers.js"
     },
     "icons": {
         "16": "images/icon-16.png",

@@ -37,6 +37,37 @@ function parseContentSecurityPolicy(policy) {
     return results;
 }
 
+// parse cookie and log the name if not HTTPOnly or Secure
+function checkCookie(cookie_blob) {
+    var cookie_tuples = cookie_blob.split(';');
+    const cookie_name = cookie_tuples[0];
+    if (!cookie_name.includes('=')) {
+        return;
+    }
+    cookie_tuples.shift();
+    var HTTPOnly = false;
+    var Secure = false;
+    for(var i = 0; i < cookie_tuples.length; i++) {
+        if (cookie_tuples[i].trim().toLowerCase() == "httponly") {
+            HTTPOnly = true;
+        } else if (cookie_tuples[i].trim().toLowerCase() == "secure") {
+            secure = true;
+        } else {
+            if (HTTPOnly && secure) {
+                break;
+            }
+        }
+    }
+    if (!HTTPOnly) {
+        // On it's own might not be a security issue unless there is a form of xss
+        console.log(`${cookie_name} is accessible to client-side scripts.`);
+    }
+    if (!secure) {
+        // Only log as most bug bounties don't care for MITM attacks
+        console.log(`${cookie_name} can be send over http.`);
+    }
+}
+
 // Entry point
 chrome.webRequest.onCompleted.addListener(
     function(details) {
@@ -54,8 +85,12 @@ chrome.webRequest.onCompleted.addListener(
                 XFramable = false; // Partly depends on the value, but keeping it simple for now.
             }
             // Content-Security-Policy checks
-            if(headers[i].name == "Content-Security-Policy") {
+            else if(headers[i].name == "Content-Security-Policy") {
                 csp_issues = parseContentSecurityPolicy(headers[i].value)
+            }
+            // cookie checks
+            else if(headers[i].name == "set-cookie") {
+                checkCookie(headers[i].value);
             }
         }
         // Some post processing

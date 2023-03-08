@@ -1,7 +1,7 @@
 // keys for results:
 const iFramable_everywhere = "iFramable_everywhere";
 
-// parse the given content security policy and return any potential issues
+// parse the given content security policy and return any potential issues and log ones that just need to be logged.
 function parseContentSecurityPolicy(policy) {
     // check frame-ancestors derivative
     const sub_policies = policy.split(';');
@@ -22,9 +22,9 @@ function parseContentSecurityPolicy(policy) {
     // Frame ancestors
     if (sub_policies_dict["frame-ancestors"] !== undefined) {
         const frame_ancestors = sub_policies_dict["frame-ancestors"];
-        iFramable = false;
+        var iFramable = false;
         for(var i = 0; i < frame_ancestors.length; i++) {
-            if(frame_ancestors[i] === "*" || frame_ancestors[i] === "https://*" || frame_ancestors[i] == "https://*") {
+            if(frame_ancestors[i] === "*" || frame_ancestors[i] === "https://*" || frame_ancestors[i] == "http://*") {
                 iFramable = true;
                 break;
             }
@@ -33,6 +33,20 @@ function parseContentSecurityPolicy(policy) {
             key: iFramable_everywhere,
             value: iFramable
         });
+    }
+    // script-src 'unsafe-inline' and 'unsafe-eval'
+    if (sub_policies_dict["script-src"] !== undefined) {
+        const script_srcs = sub_policies_dict["script-src"];
+        for (var i = 0; i < script_srcs.length; i++) {
+            script_srcs[i] = script_srcs[i].replace("'", "").replace('"', "");
+            if(script_srcs[i] === "*" || script_srcs[i] === "https://*" || script_srcs[i] === "http://*") {
+                console.log("Domain allows scripts from any site to be loaded.")
+            } else if (script_srcs[i] === "unsafe-inline") {
+                console.log("unsafe-inline scripting permitted.")
+            } else if (script_srcs[i] === "unsafe-eval") {
+                console.log("unsafe-eval permitted")
+            }
+        }
     }
     return results;
 }
